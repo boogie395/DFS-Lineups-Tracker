@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070b12">
+  <meta name="description" content="Compare Grok and ChatGPT daily fantasy lineup scores, exposure, and results.">
+  <title>DFS Lineup Tracker</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="sticky-stack">
+    <div class="wrap">
+      <header class="top">
+        <div class="brand">
+          <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
+            <rect width="36" height="36" rx="10" fill="#101828"/>
+            <path d="M7 26 L13 10 L18 18 L23 10 L29 26" fill="none" stroke="url(#brand-grad)" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="brand-grad" x1="7" y1="10" x2="29" y2="26">
+                <stop stop-color="#6ea8ff"/>
+                <stop offset="1" stop-color="#3ef0d0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div>
+            <p class="eyebrow">DFS performance</p>
+            <h1>Lineup Tracker</h1>
+          </div>
+        </div>
+        <nav class="views" aria-label="Views">
+          <button type="button" data-view="overview">Overview</button>
+          <button type="button" data-view="grok">Grok</button>
+          <button type="button" data-view="chatgpt">ChatGPT</button>
+          <button type="button" data-view="lineups">Lineups</button>
+        </nav>
+      </header>
+      <div class="filter-bar" id="filter-bar">
+        <div class="filter-head">
+          <div class="filter-copy">
+            <p id="filter-summary" aria-live="polite">Loading lineups…</p>
+            <div class="chips" id="active-chips"></div>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">Filters</button>
+            <button type="button" class="btn" id="reset">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="filter-panel" id="filter-panel"></div>
+  </div>
+  <main id="main" class="wrap">
+    <p class="lede" id="loading">Loading lineups…</p>
+  </main>
+  <footer>Lineup files in this repo are the whole database. No accounts, no trackers.</footer>
+  <noscript>This dashboard needs JavaScript to load the CSV files.</noscript>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" defer></script>
+  <script src="js/app.js" type="module"></script>
+</body>
+</html>
