@@ -55,7 +55,7 @@ Then open `http://localhost:8000`.
 
 ## Views
 
-The filter bar sticks across all four views.
+The lineup count and active-filter chips stay pinned. The filter groups sit just under that bar and scroll with the page.
 
 | View | Hash | What it shows |
 | --- | --- | --- |
@@ -66,7 +66,8 @@ The filter bar sticks across all four views.
 
 ## Filters
 
-- App, date range, sport, site, format, slate, contest type
+- App, date range, sport, site, format, slate, contest type, and exact contest name (searchable multi-select)
+- A sun/moon control in the header switches light and dark. The first visit follows the system theme; the choice is saved in this browser.
 - Entry fee as a min/max dollar range and as buckets (Under $1, $1–$5, $5–$20, $20–$100, $100+)
 - Contest size: max-entries buckets (single, 3-max, 5-max, 20-max, 150-max, 150+), field-size buckets, and prize-pool buckets
 - Entered / not entered / all. **Entered is the default.** Lineups you generated but did not submit (`used` = no) stay out of fees, winnings, cash rate, and ROI until you turn on **Include unentered lineups in fees, winnings, and ROI**
@@ -99,7 +100,7 @@ date,sport,site,format,slate,app,contest_name,contest_type,max_entries,prize_poo
 | --- | --- |
 | `date` | `YYYY-MM-DD` |
 | `sport`, `site`, `format`, `slate`, `app` | Free text. App should be `Grok` or `ChatGPT` so the colors line up. |
-| `contest_name`, `contest_type` | Type is the filter, for example `Single entry` or `150-max GPP`. |
+| `contest_name`, `contest_type` | Both are filters. Type is the bucket, for example `Single entry` or `150-max GPP`. Name is the exact contest. |
 | `max_entries`, `prize_pool`, `entry_fee` | Numbers. Fees can be cents, like `0.05`. |
 | `used` | `yes` if you entered it, `no` if you only generated it. Also accepts true/false, 1/0, entered/bench. Blank counts as not entered. |
 | `mvp`, `flex1`…`flex5` | Players. `mvp`, `cpt`, `captain`, and `capt` are the captain slot. |

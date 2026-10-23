@@ -42,6 +42,7 @@ function defaultFilters() {
     formats: [],
     slates: [],
     contestTypes: [],
+    contestNames: [],
     feeMin: '',
     feeMax: '',
     feeBuckets: [],
@@ -265,23 +266,46 @@ function gradientFor(appName, horizontal) {
   };
 }
 
+const THEME_KEY = 'dfs-theme';
+
+function themeColor(name, fallback) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
 function axisStyle() {
   return {
-    grid: { color: 'rgba(255,255,255,0.05)' },
-    ticks: { color: '#8ea0bd', font: { size: 11 } },
-    border: { color: 'rgba(255,255,255,0.08)' },
+    grid: { color: themeColor('--chart-grid', 'rgba(255,255,255,0.1)') },
+    ticks: { color: themeColor('--chart-text', '#b7c6dc'), font: { size: 11 } },
+    border: { color: themeColor('--chart-border', 'rgba(255,255,255,0.14)') },
   };
 }
 
 function tooltipStyle() {
   return {
-    backgroundColor: '#0c1322',
-    borderColor: 'rgba(164,186,214,0.2)',
+    backgroundColor: themeColor('--tooltip-bg', '#101828'),
+    borderColor: themeColor('--tooltip-border', 'rgba(184,202,224,0.35)'),
     borderWidth: 1,
-    titleColor: '#e7eefb',
-    bodyColor: '#c5d2e8',
+    titleColor: themeColor('--tooltip-title', '#f4f7fb'),
+    bodyColor: themeColor('--tooltip-body', '#d5e0ee'),
     padding: 10,
   };
+}
+
+function updateThemeButton() {
+  const button = document.getElementById('theme-toggle');
+  if (!button) return;
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  button.setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode');
+}
+
+function applyTheme(theme, persist) {
+  document.documentElement.setAttribute('data-theme', theme);
+  if (persist) localStorage.setItem(THEME_KEY, theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#eef3f8' : '#070b12');
+  updateThemeButton();
+  if (state.ready) safeRender();
 }
 
 function destroyCharts() {
@@ -304,13 +328,26 @@ function mountChart(id, config) {
 
 function ensureChartDefaults() {
   if (typeof Chart === 'undefined') return;
-  Chart.defaults.color = '#8ea0bd';
-  Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+  Chart.defaults.color = themeColor('--chart-text', '#b7c6dc');
+  Chart.defaults.borderColor = themeColor('--chart-border', 'rgba(255,255,255,0.14)');
   Chart.defaults.font.family = '"Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif';
 }
 
 async function boot() {
   reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  updateThemeButton();
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    applyTheme(next, true);
+  });
+  const scheme = window.matchMedia('(prefers-color-scheme: dark)');
+  const followScheme = () => {
+    let stored = null;
+    try { stored = localStorage.getItem(THEME_KEY); } catch (_error) { stored = 'skip'; }
+    if (stored) return;
+    applyTheme(scheme.matches ? 'dark' : 'light', false);
+  };
+  if (scheme.addEventListener) scheme.addEventListener('change', followScheme);
   document.querySelector('.views').addEventListener('click', (event) => {
     const button = event.target.closest('[data-view]');
     if (!button) return;
@@ -365,45 +402,78 @@ function mountFilters() {
   const panel = document.getElementById('filter-panel');
   const apps = appOptions();
   const dates = uniqueValues(state.lineups, 'date');
+  const contests = uniqueValues(state.lineups, 'contestName').sort((a, b) => a.localeCompare(b));
   panel.innerHTML = `
-    <div class="field usage-field">
-      <div class="seg" role="radiogroup" aria-label="Entered or not entered">
-        ${usageOption('entered', 'Entered')}
-        ${usageOption('bench', 'Not entered')}
-        ${usageOption('all', 'All')}
+    <section class="filter-group" aria-labelledby="group-status">
+      <h2 class="group-title" id="group-status">Status &amp; dates</h2>
+      <div class="status-grid">
+        <div class="control">
+          <span class="control-label" id="usage-label">Lineups</span>
+          <div class="seg" role="radiogroup" aria-labelledby="usage-label">
+            ${usageOption('entered', 'Entered')}
+            ${usageOption('bench', 'Not entered')}
+            ${usageOption('all', 'All')}
+          </div>
+        </div>
+        <div class="control">
+          <label class="control-label" for="f-from">From</label>
+          <input type="date" id="f-from" ${dates[0] ? `min="${esc(dates[0])}"` : ''}>
+        </div>
+        <div class="control">
+          <label class="control-label" for="f-to">To</label>
+          <input type="date" id="f-to" ${dates.length ? `max="${esc(dates[dates.length - 1])}"` : ''}>
+        </div>
       </div>
-    </div>
-    <div class="field dates-field">
-      <div class="dates">
-        <input type="date" id="f-from" aria-label="From date" ${dates[0] ? `min="${esc(dates[0])}"` : ''}>
-        <span>to</span>
-        <input type="date" id="f-to" aria-label="To date" ${dates.length ? `max="${esc(dates[dates.length - 1])}"` : ''}>
+    </section>
+    <section class="filter-group" aria-labelledby="group-contest">
+      <h2 class="group-title" id="group-contest">Contest</h2>
+      <div class="contest-grid">
+        ${multi('App', 'apps', apps)}
+        ${multi('Sport', 'sports', uniqueValues(state.lineups, 'sport'))}
+        ${multi('Site', 'sites', uniqueValues(state.lineups, 'site'))}
+        ${multi('Format', 'formats', uniqueValues(state.lineups, 'format'))}
+        ${multi('Slate', 'slates', uniqueValues(state.lineups, 'slate'))}
+        ${multi('Contest type', 'contestTypes', sortContestTypes(uniqueValues(state.lineups, 'contestType')))}
+        ${multi('Contest name', 'contestNames', contests, { span: true, search: true })}
       </div>
-    </div>
-    <div class="field player-field">
-      <input id="f-player" type="search" placeholder="Player search" autocomplete="off" aria-label="Player search">
-      <label class="check"><input type="checkbox" id="f-mvp"> MVP only</label>
-    </div>
-    ${multi('App', 'apps', apps)}
-    ${multi('Sport', 'sports', uniqueValues(state.lineups, 'sport'))}
-    ${multi('Site', 'sites', uniqueValues(state.lineups, 'site'))}
-    ${multi('Format', 'formats', uniqueValues(state.lineups, 'format'))}
-    ${multi('Slate', 'slates', uniqueValues(state.lineups, 'slate'))}
-    ${multi('Contest type', 'contestTypes', sortContestTypes(uniqueValues(state.lineups, 'contestType')))}
-    <div class="field fee-field">
-      <div class="fee-chips" role="group" aria-label="Entry fee buckets">
-        ${FEE_BUCKETS.map((bucket) => `<button type="button" data-fee-bucket="${esc(bucket)}" aria-pressed="false">${esc(bucket)}</button>`).join('')}
+    </section>
+    <section class="filter-group" aria-labelledby="group-money">
+      <h2 class="group-title" id="group-money">Money</h2>
+      <div class="money-stack">
+        <div class="control fee-line">
+          <span class="control-label" id="fee-label">Entry fee</span>
+          <div class="fee-line-controls">
+            <div class="fee-chips" role="group" aria-labelledby="fee-label">
+              ${FEE_BUCKETS.map((bucket) => `<button type="button" data-fee-bucket="${esc(bucket)}" aria-pressed="false">${esc(bucket)}</button>`).join('')}
+            </div>
+            <div class="fee-bounds">
+              <input id="f-fee-min" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Min $" aria-label="Minimum entry fee">
+              <span aria-hidden="true">–</span>
+              <input id="f-fee-max" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Max $" aria-label="Maximum entry fee">
+            </div>
+          </div>
+        </div>
+        <div class="money-extra">
+          ${multi('Max entries', 'maxEntryBuckets', MAX_ENTRY_BUCKETS)}
+          ${multi('Field size', 'fieldBuckets', FIELD_BUCKETS)}
+          ${multi('Prize pool', 'poolBuckets', POOL_BUCKETS)}
+        </div>
+        <label class="switch money-switch"><input type="checkbox" id="f-money"> Include unentered in fees, winnings, and ROI</label>
       </div>
-      <div class="fee-range">
-        <input id="f-fee-min" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Min $" aria-label="Minimum entry fee">
-        <span>–</span>
-        <input id="f-fee-max" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Max $" aria-label="Maximum entry fee">
+    </section>
+    <section class="filter-group" aria-labelledby="group-players">
+      <h2 class="group-title" id="group-players">Players</h2>
+      <div class="players-grid">
+        <div class="control">
+          <label class="control-label" for="f-player">Player</label>
+          <input id="f-player" type="search" placeholder="Search players" autocomplete="off">
+        </div>
+        <div class="control">
+          <span class="control-label" id="mvp-label">Role</span>
+          <label class="check-shell"><input type="checkbox" id="f-mvp"> MVP / captain only</label>
+        </div>
       </div>
-    </div>
-    ${multi('Max entries', 'maxEntryBuckets', MAX_ENTRY_BUCKETS)}
-    ${multi('Field size', 'fieldBuckets', FIELD_BUCKETS)}
-    ${multi('Prize pool', 'poolBuckets', POOL_BUCKETS)}
-    <label class="switch money-switch"><input type="checkbox" id="f-money"> Include unentered in fees, winnings, and ROI</label>
+    </section>
   `;
   panel.addEventListener('change', onFilterChange);
   panel.addEventListener('input', onFilterInput);
@@ -429,7 +499,7 @@ function appOptions() {
   return found;
 }
 
-function multi(label, facet, options) {
+function multi(label, facet, options, extra = {}) {
   const choices = options.length
     ? options.map((option) => `
         <label class="ms-opt">
@@ -437,11 +507,18 @@ function multi(label, facet, options) {
           <span>${esc(option)}</span>
         </label>`).join('')
     : '<p class="ms-empty">No values yet</p>';
+  const search = extra.search
+    ? '<input type="search" class="ms-search" data-contest-search placeholder="Search contests" aria-label="Search contest names">'
+    : '';
   return `
-    <div class="field">
+    <div class="control${extra.span ? ' span-2' : ''}" data-facet-control="${facet}">
+      <span class="control-label" id="label-${facet}">${esc(label)}</span>
       <details class="ms">
-        <summary><span class="prefix">${esc(label)}</span><span class="ms-val" data-ms-for="${facet}">All</span></summary>
-        <div class="ms-menu">${choices}</div>
+        <summary aria-labelledby="label-${facet}">
+          <span class="ms-val" data-ms-for="${facet}">All</span>
+          <span class="ms-caret" aria-hidden="true"></span>
+        </summary>
+        <div class="ms-menu">${search}<div class="ms-options">${choices}</div></div>
       </details>
     </div>`;
 }
@@ -477,6 +554,13 @@ function onFilterChange(event) {
 
 function onFilterInput(event) {
   const target = event.target;
+  if (target.matches('[data-contest-search]')) {
+    const query = target.value.trim().toLowerCase();
+    target.closest('.ms-menu')?.querySelectorAll('.ms-opt').forEach((option) => {
+      option.hidden = Boolean(query) && !option.textContent.toLowerCase().includes(query);
+    });
+    return;
+  }
   if (target.id === 'f-player') {
     filters.player = target.value;
     safeRender({ filtersChanged: true });
@@ -558,6 +642,7 @@ function chipModels() {
     ['formats', 'Format'],
     ['slates', 'Slate'],
     ['contestTypes', 'Type'],
+    ['contestNames', 'Contest'],
     ['feeBuckets', 'Fee'],
     ['maxEntryBuckets', 'Max'],
     ['fieldBuckets', 'Field'],
@@ -595,14 +680,14 @@ function reflectControls() {
   document.querySelectorAll('.ms-val').forEach((element) => {
     const selected = filters[element.dataset.msFor] || [];
     element.textContent = !selected.length ? 'All' : selected.length === 1 ? selected[0] : `${selected.length} selected`;
+    element.classList.toggle('is-set', selected.length > 0);
   });
 }
 
 function syncAppLock() {
   const lock = currentLock();
-  document.querySelectorAll('[data-facet="apps"]').forEach((input) => {
-    const field = input.closest('.field');
-    if (field) field.hidden = Boolean(lock);
+  document.querySelectorAll('[data-facet-control="apps"]').forEach((field) => {
+    field.hidden = Boolean(lock);
   });
 }
 
@@ -619,6 +704,11 @@ function updateSummary(sel) {
   document.getElementById('active-chips').innerHTML = chips.map((chip) => (
     `<button type="button" class="chip" data-chip="${esc(chip.id)}">${esc(chip.label)} <span aria-hidden="true">×</span></button>`
   )).join('');
+  const count = document.getElementById('filter-count');
+  if (count) {
+    count.hidden = chips.length === 0;
+    count.textContent = chips.length === 1 ? '1 active filter' : `${chips.length} active filters`;
+  }
   const toggle = document.getElementById('filter-toggle');
   toggle.textContent = chips.length ? `Filters · ${chips.length}` : 'Filters';
 }
@@ -1216,6 +1306,7 @@ function onMainClick(event) {
 }
 
 function buildCharts(viewName, sel) {
+  ensureChartDefaults();
   if (viewName === 'lineups' || typeof Chart === 'undefined') return;
   const rows = sel.view;
   if (!rows.length) return;
@@ -1467,12 +1558,12 @@ function buildExposureChart(appName, rows) {
       scales: {
         x: {
           ...axisStyle(),
-          title: { display: true, text: 'Exposure %', color: '#8ea0bd' },
+          title: { display: true, text: 'Exposure %', color: themeColor('--chart-text', '#b7c6dc') },
           beginAtZero: true,
         },
         y: {
           ...axisStyle(),
-          title: { display: true, text: 'Avg lineup pts', color: '#8ea0bd' },
+          title: { display: true, text: 'Avg lineup pts', color: themeColor('--chart-text', '#b7c6dc') },
         },
       },
     },

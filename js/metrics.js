@@ -139,6 +139,7 @@ export function applyFilters(rows, filters, opts = {}) {
     if (filters.formats.length && !filters.formats.includes(row.format)) return false;
     if (filters.slates.length && !filters.slates.includes(row.slate)) return false;
     if (filters.contestTypes.length && !filters.contestTypes.includes(row.contestType)) return false;
+    if (filters.contestNames?.length && !filters.contestNames.includes(row.contestName)) return false;
     if (Number.isFinite(feeMin) && (row.fee == null || row.fee < feeMin)) return false;
     if (Number.isFinite(feeMax) && (row.fee == null || row.fee > feeMax)) return false;
     if (filters.feeBuckets.length && !filters.feeBuckets.includes(row.feeBucket)) return false;

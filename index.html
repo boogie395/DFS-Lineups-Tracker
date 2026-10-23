@@ -7,6 +7,19 @@
   <meta name="description" content="Compare Grok and ChatGPT daily fantasy lineup scores, exposure, and results.">
   <title>DFS Lineup Tracker</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('dfs-theme');
+        var theme = stored === 'light' || stored === 'dark'
+          ? stored
+          : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', theme === 'light' ? '#eef3f8' : '#070b12');
+      } catch (error) {}
+    })();
+  </script>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -30,29 +43,41 @@
             <h1>Lineup Tracker</h1>
           </div>
         </div>
-        <nav class="views" aria-label="Views">
-          <button type="button" data-view="overview">Overview</button>
-          <button type="button" data-view="grok">Grok</button>
-          <button type="button" data-view="chatgpt">ChatGPT</button>
-          <button type="button" data-view="lineups">Lineups</button>
-        </nav>
+        <div class="header-tools">
+          <button type="button" class="icon-btn" id="theme-toggle" aria-label="Switch color theme">
+            <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.1 5.1l1.6 1.6M17.3 17.3l1.6 1.6M18.9 5.1l-1.6 1.6M6.7 17.3l-1.6 1.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15.5 3.4A8.2 8.2 0 1 0 20.6 14.8 6.6 6.6 0 0 1 15.5 3.4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <nav class="views" aria-label="Views">
+            <button type="button" data-view="overview">Overview</button>
+            <button type="button" data-view="grok">Grok</button>
+            <button type="button" data-view="chatgpt">ChatGPT</button>
+            <button type="button" data-view="lineups">Lineups</button>
+          </nav>
+        </div>
       </header>
       <div class="filter-bar" id="filter-bar">
         <div class="filter-head">
           <div class="filter-copy">
             <p id="filter-summary" aria-live="polite">Loading lineups…</p>
+            <p id="filter-count" class="filter-count" hidden></p>
             <div class="chips" id="active-chips"></div>
           </div>
           <div class="filter-actions">
             <button type="button" class="btn" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">Filters</button>
-            <button type="button" class="btn" id="reset">Reset</button>
+            <button type="button" class="btn btn-reset" id="reset">Reset filters</button>
           </div>
         </div>
       </div>
     </div>
   </div>
   <div class="wrap">
-    <div class="filter-panel" id="filter-panel"></div>
+    <div class="filter-grid" id="filter-panel"></div>
   </div>
   <main id="main" class="wrap">
     <p class="lede" id="loading">Loading lineups…</p>
